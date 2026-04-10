@@ -1,0 +1,59 @@
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# C extensions / build artifacts
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+visual_encoder_env/
+
+# IDE/Editors
+.idea/
+.vscode/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# PyTorch / Models
+*.pth
+*.pt
+*.ckpt
+*.onnx
+
+# Pytest / Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+coverage.xml
+
+# MyPy
+.mypy_cache/
