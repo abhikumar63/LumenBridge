@@ -45,3 +45,39 @@ git clone https://github.com/abhikumar63/LumenBridge
 cd LumenBridge
 pip install .
 ```
+
+## 🔬 Technical Deep-Dive
+
+### 1. Mathematical Representation: Linear Projection of Patches
+LumenBridge treats visual tokenization as a high-dimensional manifold mapping problem. Instead of processing raw pixels, we decompose an image $I \in \mathbb{R}^{H \times W \times C}$ into a sequence of flattened 2D patches $x_p \in \mathbb{R}^{N \times (P^2 \cdot C)}$.
+
+The core operation is a Linear Projection into a $D$-dimensional latent space:
+$$z_0 = [x_p^1 E; x_p^2 E; \dots; x_p^N E] + E_{pos}$$
+
+Where:
+- $E$: The learnable projection matrix (Weight matrix).
+- $E_{pos}$: 1D Learnable Positional Embeddings to retain spatial context.
+
+**Optimization:** We utilize Xavier Initialization for the projection weights to prevent signal attenuation or explosion during the initial forward passes through the encoder.
+
+### 2. The C++ / LibTorch Bridge
+To achieve near-zero latency in the tokenization pipeline, the projection and normalization layers are offloaded to the C++ core via PyTorch C++ Extensions (ATen/TorchBind).
+
+- **Bypassing the GIL:** By executing the patch-to-embedding transformation in native code, we bypass the Python Global Interpreter Lock (GIL), allowing for true multi-threaded pre-processing of image batches.
+- **Memory Efficiency:** We implement Zero-Copy Tensors where possible. The C++ backend maps memory directly from the hardware buffer to the Torch tensor, minimizing redundant allocations.
+
+## ⚖️ Performance Trade-offs & Optimizations
+
+In the development of LumenBridge, several architectural decisions were made to balance accuracy with computational throughput.
+
+### 1. Precision vs. Latency (FP16 vs. FP32)
+- **Decision:** We default to Automatic Mixed Precision (AMP) for the projection layers.
+- **Trade-off:** While FP32 offers maximum numerical stability, FP16 reduces the memory footprint by 50% and increases throughput on hardware-accelerated units (like Apple's AMX or NVIDIA's Tensor Cores) with negligible impact on the semantic quality of the visual tokens.
+
+### 2. Memory Hierarchy & Cache Locality
+Developing on Apple Silicon (Unified Memory Architecture) required a specific focus on cache-aware programming.
+- **Optimization:** We use a Tiled Memory Access pattern for the initial patch extraction. By ensuring the image data is accessed in a way that fits within the L2 cache, we drastically reduce the overhead caused by memory bus contention during high-resolution tokenization.
+
+### 3. Dimensionality Bottlenecking
+- **Decision:** We implement an optional PCA-based Dimensionality Reduction layer immediately following the projection.
+- **Trade-off:** This slightly increases the initial compute cost but significantly reduces the $D$ dimension of the tokens sent to the LLM, effectively doubling the context window for multimodal reasoning without retraining the base model.
