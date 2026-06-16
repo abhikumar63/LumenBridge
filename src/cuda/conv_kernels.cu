@@ -89,6 +89,48 @@ __global__ void depthwise_conv_shared_kernel(
         shared_tile[smem_y + HALO_SIZE][smem_x] = val;
     }
 
+    // --- CORNER HALO LOADING (The Fix) ---
+    // Top-Left Corner
+    if (tx < HALO_SIZE && ty < HALO_SIZE) {
+        int halo_r = row_in - HALO_SIZE;
+        int halo_c = col_in - HALO_SIZE;
+        float val = 0.0f;
+        if (halo_r >= 0 && halo_c >= 0) {
+            val = input[b * (channels * height * width) + channel * (height * width) + halo_r * width + halo_c];
+        }
+        shared_tile[ty][tx] = val;
+    }
+    // Top-Right Corner
+    if (tx >= TILE_WIDTH - HALO_SIZE && ty < HALO_SIZE) {
+        int halo_r = row_in - HALO_SIZE;
+        int halo_c = col_in + HALO_SIZE;
+        float val = 0.0f;
+        if (halo_r >= 0 && halo_c < width) {
+            val = input[b * (channels * height * width) + channel * (height * width) + halo_r * width + halo_c];
+        }
+        shared_tile[ty][smem_x + HALO_SIZE] = val;
+    }
+    // Bottom-Left Corner
+    if (tx < HALO_SIZE && ty >= TILE_WIDTH - HALO_SIZE) {
+        int halo_r = row_in + HALO_SIZE;
+        int halo_c = col_in - HALO_SIZE;
+        float val = 0.0f;
+        if (halo_r < height && halo_c >= 0) {
+            val = input[b * (channels * height * width) + channel * (height * width) + halo_r * width + halo_c];
+        }
+        shared_tile[smem_y + HALO_SIZE][tx] = val;
+    }
+    // Bottom-Right Corner
+    if (tx >= TILE_WIDTH - HALO_SIZE && ty >= TILE_WIDTH - HALO_SIZE) {
+        int halo_r = row_in + HALO_SIZE;
+        int halo_c = col_in + HALO_SIZE;
+        float val = 0.0f;
+        if (halo_r < height && halo_c < width) {
+            val = input[b * (channels * height * width) + channel * (height * width) + halo_r * width + halo_c];
+        }
+        shared_tile[smem_y + HALO_SIZE][smem_x + HALO_SIZE] = val;
+    }
+
     // 3. Hardware Barrier
     // Wait for all 256 threads in this block to finish fetching their pixels + halo pixels
     __syncthreads();
