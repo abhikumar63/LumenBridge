@@ -34,6 +34,9 @@ if build_cuda:
     # Inject the future CUDA file into the compilation sources
     sources.append("src/cuda/conv_kernels.cu")
     
+    # Tell the C++ compiler that CUDA is active
+    extra_compile_args["cxx"].append("-DUSE_CUDA")
+
     # Add strict, high-performance flags specifically for the NVIDIA compiler (nvcc)
     extra_compile_args["nvcc"] = [
         "-O3",

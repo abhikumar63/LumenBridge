@@ -106,3 +106,25 @@ visual_tokens = tokenizer(raw_images)
 print(f"Token Output Shape: {visual_tokens.shape}")
 # Expected Output: torch.Size([4, 196, 768])
 ```
+
+## ☁️ Production Deployment (AWS & TensorRT)
+
+LumenBridge is fully containerized and packaged for ultra-low latency inference on NVIDIA data center GPUs (e.g., AWS `g4dn` instances). 
+
+To eliminate framework overhead in production, the architecture supports a direct pipeline from a PyTorch dynamic graph to a serialized TensorRT engine:
+
+1. **INT8 Post-Training Quantization (PTQ):** A shadow reference model calculates optimal scaling factors using Apple's `qnnpack`, shrinking the footprint by ~75% while maintaining semantic fidelity.
+2. **ONNX Graph Export:** The non-deterministic C++ operations are traced and frozen into a static `lumenbridge_stem.onnx` representation.
+3. **Hardware Compilation:** The provided `Dockerfile` mimics a strict CUDA 12.1 + TensorRT environment. The native hardware router injects NVIDIA `nvcc` flags (`--use_fast_math`), compiling the custom shared-memory kernels and generating the final serialized `.engine` microservice.
+
+### Deployment Handoff
+```bash
+# 1. Provision an AWS g4dn.xlarge instance (Ubuntu Deep Learning AMI)
+# 2. Build the TensorRT Deployment Container
+docker build -t lumenbridge-trt .
+
+# 3. Compile the Serialized Engine
+docker run --gpus all -it lumenbridge-trt python scripts/export_engine.py lumenbridge_stem.onnx lumenbridge.engine
+
+# 4. Run Latency Benchmark
+docker run --gpus all -it lumenbridge-trt python scripts/benchmark.py lumenbridge.engine

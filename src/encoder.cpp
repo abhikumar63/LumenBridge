@@ -1,7 +1,9 @@
 #include "encoder.hpp"
 
-// Forward declaration telling the compiler this function exists in the .cu file
+// 1. Guard the declaration
+#ifdef USE_CUDA
 torch::Tensor launch_depthwise_conv_cuda(const torch::Tensor& input, int64_t d_model, int64_t kernel_size, int64_t stride);
+#endif
 
 namespace lumenbridge {
 namespace core {
@@ -17,9 +19,13 @@ torch::Tensor project_patches(
 
     // --- THE HARDWARE ROUTER ---
     if (input.device().is_cuda()) {
-        // PRODUCTION PATH: The tensor is on an NVIDIA GPU. Route to custom kernels.
+        // 2. Guard the execution
+#ifdef USE_CUDA
         return launch_depthwise_conv_cuda(input, d_model, kernel_size, stride);
-    } 
+#else
+        TORCH_CHECK(false, "LumenBridge Error: Compiled for CPU/Mac, but a CUDA tensor was passed.");
+#endif
+    }
     
     // MAC LOCAL DEV PATH: Fall back to ATen C++ operations
     int64_t channels = input.size(1);
