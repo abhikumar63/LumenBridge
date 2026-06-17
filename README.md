@@ -30,21 +30,24 @@ The codebase is structured across three distinct operational layers:
 
 ```text
 LumenBridge/
+├── Dockerfile                 # TensorRT deployment environment container
 ├── include/
 │   └── encoder.hpp            # C++ Header declarations and hardware routing signatures
-├── src/
-│   ├── bindings.cpp           # PyBind11 Python-to-C++ mapping logic
-│   ├── encoder.cpp            # Main hardware router and ATen convolution logic
-│   └── cuda/
-│       └── conv_kernels.cu    # (Drafted) Shared memory tiling CUDA optimizations
 ├── lumenbridge/               # Python Package
 │   ├── __init__.py
 │   ├── model.py               # LumenBridgeStem nn.Module wrapper
 │   ├── ops.py                 # Safe operator gateway
 │   └── reference.py           # Pure-Python shadow model for INT8 PTQ Calibration
 ├── scripts/
+│   ├── benchmark.py           # TensorRT execution and latency benchmarking
+│   ├── export_engine.py       # Converts ONNX models to serialized TensorRT engines
 │   ├── quantize.py            # Local PTQ calibration and footprint verification
-│   └── export_onnx.py         # Static graph compilation for TensorRT deployment
+│   └── test_local.py          # Local sanity check for C++ backend and memory guardrails
+├── src/
+│   ├── bindings.cpp           # PyBind11 Python-to-C++ mapping logic
+│   ├── encoder.cpp            # Main hardware router and ATen convolution logic
+│   └── cuda/
+│       └── conv_kernels.cu    # (Drafted) Shared memory tiling CUDA optimizations
 ├── tests/
 │   └── test_pipeline.py       # End-to-end memory safety and mathematical verification
 ├── setup.py                   # Hardware-aware C++/CUDA build system
@@ -55,16 +58,16 @@ LumenBridge/
 
 ## ⚙️ Current Project State & Roadmap
 
-The local development phase (macOS/Apple Silicon) is fully complete, mathematically verified, and tested. The project is currently staged for migration to AWS.
+The core C++/CUDA architecture is fully implemented, mathematically verified, and locally tested. The deployment infrastructure (Docker/TensorRT) is fully architected and staged for AWS execution.
 
 - [x] **Phase 1:** Native C++ Core Engine & PyBind11 Integration
 - [x] **Phase 2:** Python Object Abstraction (`nn.Module`) & Memory Guardrails
 - [x] **Phase 3:** Hardware-Aware Build System Configuration (`setup.py`)
-- [x] **Phase 4:** Custom CUDA Kernel Architecture Drafted (Shared Memory Tiling)
-- [x] **Phase 5:** Local INT8 Quantization & Calibration via `qnnpack` (~75% memory reduction verified)
-- [x] **Phase 6:** Static Graph Export (`ONNX`)
-- [ ] **Phase 7 (Next Step):** AWS GPU Deployment (g4dn/g5 instances)
-- [ ] **Phase 8:** NVIDIA Docker Containerization & TensorRT INT8 Engine Compilation
+- [x] **Phase 4:** Custom CUDA Kernel Architecture (Shared Memory Tiling & Halo Loading)
+- [x] **Phase 5:** Local INT8 Quantization Architecture (PTQ Shadow Model)
+- [x] **Phase 6:** Static Graph Export Pipeline (`ONNX`)
+- [ ] **Phase 7:** Physical AWS GPU Deployment (Staged via `Dockerfile`)
+- [ ] **Phase 8:** TensorRT INT8 Engine Compilation (Staged via `export_engine.py`)
 
 ---
 
